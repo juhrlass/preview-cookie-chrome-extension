@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Preview Cookie",
+  "description": "Preview Cookie Chrome Extension",
+  "version": "1.0",
+  "icons": {
+    "16": "icons/icon16.png",
+    "19": "icons/icon19.png",
+    "32": "icons/icon32.png",
+    "38": "icons/icon38.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "index.html"
+  },
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "web_accessible_resources": [
+    {
+      "matches": [
+        "https://*/*"
+      ],
+      "resources": [
+        "assets/*"
+      ]
+    }
+  ],
+  "permissions": [
+    "cookies",
+    "storage",
+    "scripting",
+    "tabs",
+    "activeTab"
+  ]
+}
