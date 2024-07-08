@@ -1,9 +1,9 @@
-export async function hostnameFromCurrentTab() {
-    let queryResultHostname
+export async function protocolAndHostnameFromCurrentTab() {
+    let protocolAndHostname
     const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
     if (tab?.url) {
         const url = new URL(tab.url);
-        queryResultHostname = url.hostname
+        protocolAndHostname = url.protocol+"//"+url.hostname
     }
-    return queryResultHostname;
+    return protocolAndHostname;
 }
