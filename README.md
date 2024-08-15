@@ -1,7 +1,7 @@
 # Preview Cookie Chrome Extension
 
-This is a tiny Chrome browser extension, that allows you to quickly set or unset a preview cookie for a website,
-so you can conveniently switch between a "preview" or "development" mode and standard mode.
+This is a tiny Chrome browser extension, that allows you to quickly set or unset a preview or other purpose cookies for a website,
+so you can conveniently switch between a "preview" or "development" mode and standard mode or force other site behaviour.
 
 # Screenshot
 

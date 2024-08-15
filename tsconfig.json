@@ -34,7 +34,8 @@
   },
   "include": ["src"],
   "files": [
-    "node_modules/.pnpm/@types+chrome@0.0.268/node_modules/@types/chrome/index.d.ts"
+    "node_modules/.pnpm/@types+chrome@0.0.268/node_modules/@types/chrome/index.d.ts",
+    "node_modules/.pnpm/@types+chrome@0.0.270/node_modules/@types/chrome/index.d.ts"
   ],
   "references": [
     {
