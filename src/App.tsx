@@ -1,5 +1,5 @@
 import {useCallback, useLayoutEffect, useMemo, useState} from "react";
-import {HostConfig, HostConfigs} from "@/types";
+import {HostConfig, HostConfigs, OffBehavior, OnValue} from "@/types";
 import {protocolAndHostnameFromCurrentTab} from "@/lib/chromeHelpers.ts";
 import {Button} from "@/components/ui/button.tsx";
 import {Input} from "@/components/ui/input.tsx";
@@ -38,6 +38,8 @@ interface HostConfigsTableProps {
     label?: string
     onDelete?: (id: string) => void
     onDuplicate?: (id: string) => void
+    onUpdateOnValue?: (id: string, value: OnValue) => void
+    onUpdateOffBehavior?: (id: string, value: OffBehavior) => void
 }
 
 const HostConfigsTable = (props: HostConfigsTableProps) => {
@@ -50,9 +52,11 @@ const HostConfigsTable = (props: HostConfigsTableProps) => {
             <table className="table-auto w-full">
                 <thead>
                 <tr>
-                    <th className={"text-left w-56"}>Host</th>
+                    <th className={"text-left w-40"}>Host</th>
                     <th className={"text-left"}>Cookie Name</th>
                     <th className={"text-left"}>Switch Label</th>
+                    <th className={"text-left w-28"}>On value</th>
+                    <th className={"text-left w-36"}>Off action</th>
                     <th className={"text-left w-16"}>&nbsp;</th>
                 </tr>
                 </thead>
@@ -71,7 +75,27 @@ const HostConfigsTable = (props: HostConfigsTableProps) => {
                         <td>
                             <p>  {item.cookieLabel}</p>
                         </td>
-
+                        <td>
+                            <select
+                                className="h-7 text-sm border rounded px-1"
+                                value={item.onValue ?? "1"}
+                                onChange={(e) => props.onUpdateOnValue && props.onUpdateOnValue(item.id, e.target.value as OnValue)}
+                            >
+                                <option value="1">1</option>
+                                <option value="true">true</option>
+                            </select>
+                        </td>
+                        <td>
+                            <select
+                                className="h-7 text-sm border rounded px-1"
+                                value={item.offBehavior ?? "remove"}
+                                onChange={(e) => props.onUpdateOffBehavior && props.onUpdateOffBehavior(item.id, e.target.value as OffBehavior)}
+                            >
+                                <option value="remove">remove cookie</option>
+                                <option value="0">set 0</option>
+                                <option value="false">set false</option>
+                            </select>
+                        </td>
                         <td>
                             <div className={"flex gap-1 justify-end"}>
                                 {props?.onDuplicate &&
@@ -109,6 +133,8 @@ export default function App() {
     const [currentProtocolAndHostname, setCurrentProtocolAndHostname] = useState<string>("")
     const [previewCookieName, setPreviewCookieName] = useState<string>("preview")
     const [previewCookieLabel, setPreviewCookieLabel] = useState<string>("Preview Cookie")
+    const [newOnValue, setNewOnValue] = useState<OnValue>("1")
+    const [newOffBehavior, setNewOffBehavior] = useState<OffBehavior>("remove")
 
     const [cookieOnMap, setCookieOnMap] = useState<{[key: string]: boolean}>({})
     const [currentHostConfigs, setCurrentHostConfigs] = useState<HostConfig[] | null>(null)
@@ -138,9 +164,10 @@ export default function App() {
                             url: protocolAndHostname,
                             name: foundHostConfig.cookieName
                         })
-                        if (cookieValue && cookieValue.value !== "0") {
+                        const onValue: OnValue = foundHostConfig.onValue ?? "1";
+                        if (cookieValue && cookieValue.value === onValue) {
                             newCookieMap[foundHostConfig.id]=true
-                        }else {
+                        } else {
                             newCookieMap[foundHostConfig.id]=false
                         }
                     }
@@ -169,6 +196,8 @@ export default function App() {
             hostName: currentProtocolAndHostname,
             cookieName: previewCookieName,
             cookieLabel: previewCookieLabel,
+            onValue: newOnValue,
+            offBehavior: newOffBehavior,
         });
 
         const newConfigs = {...configs}
@@ -223,6 +252,21 @@ export default function App() {
 
     }
 
+    function updateConfigPartial(id: string, patch: Partial<HostConfig>) {
+        const newConfigs = {...configs}
+        const allHostConfigs = configs.hostConfigs
+        if (allHostConfigs && newConfigs.hostConfigs) {
+            const idx = newConfigs.hostConfigs.findIndex((c) => c.id === id)
+            if (idx !== -1) {
+                newConfigs.hostConfigs[idx] = { ...newConfigs.hostConfigs[idx], ...patch }
+                setConfigs(newConfigs)
+                chrome.storage.local.set({"configs": newConfigs}, () => {})
+                const foundConfigsForHostname = findConfigsForHostname(newConfigs, currentProtocolAndHostname)
+                setCurrentHostConfigs(foundConfigsForHostname)
+            }
+        }
+    }
+
     function onChangePreview(id: string) {
 
         if (currentHostConfigs) {
@@ -233,14 +277,25 @@ export default function App() {
             const currentHostConfig = findConfigForId(currentHostConfigs, id)
 
             if (currentHostConfig) {
+                const onValue: OnValue = currentHostConfig.onValue ?? "1";
+                const offBehavior: OffBehavior = currentHostConfig.offBehavior ?? "remove";
                 if (newPreviewState) {
                     chrome.cookies.set({
                         url: currentProtocolAndHostname,
                         name: currentHostConfig.cookieName,
-                        value: "1"
+                        value: onValue
                     })
                 } else {
-                    chrome.cookies.remove({url: currentProtocolAndHostname, name: currentHostConfig.cookieName})
+                    if (offBehavior === "remove") {
+                        chrome.cookies.remove({url: currentProtocolAndHostname, name: currentHostConfig.cookieName})
+                    } else {
+                        const offValue = offBehavior; // "0" or "false"
+                        chrome.cookies.set({
+                            url: currentProtocolAndHostname,
+                            name: currentHostConfig.cookieName,
+                            value: offValue
+                        })
+                    }
                 }
 
                 const newCookieOnMap= {...cookieOnMap}
@@ -334,11 +389,32 @@ export default function App() {
                             <Input
                                 value={previewCookieName}
                                 onChange={e => setPreviewCookieName(e.target.value)}
+                                placeholder="cookie name"
                             />
                             <Input
                                 value={previewCookieLabel}
                                 onChange={e => setPreviewCookieLabel(e.target.value)}
+                                placeholder="switch label"
                             />
+                            <select
+                                className="h-9 text-sm border rounded px-2"
+                                value={newOnValue}
+                                onChange={(e) => setNewOnValue(e.target.value as OnValue)}
+                                title="ON value"
+                            >
+                                <option value="1">ON: 1</option>
+                                <option value="true">ON: true</option>
+                            </select>
+                            <select
+                                className="h-9 text-sm border rounded px-2"
+                                value={newOffBehavior}
+                                onChange={(e) => setNewOffBehavior(e.target.value as OffBehavior)}
+                                title="OFF action"
+                            >
+                                <option value="remove">OFF: remove cookie</option>
+                                <option value="0">OFF: set 0</option>
+                                <option value="false">OFF: set false</option>
+                            </select>
 
                             <Button size={"sm"}
                                     aria-label={"Add Config"}
@@ -355,9 +431,15 @@ export default function App() {
                             <div className={"flex w-full flex-col gap-4 items-start justify-start"}>
                                 <p className={"font-bold text-lg"}>Existing Cookie Configs</p>
                                 <HostConfigsTable hostConfigs={getCurrentHostConfigs} label={"Existing cookie configs for current PROTOCOL://HOST"}
-                                                  onDelete={deleteConfig} />
+                                                  onDelete={deleteConfig}
+                                                  onUpdateOnValue={(id, value) => updateConfigPartial(id, { onValue: value })}
+                                                  onUpdateOffBehavior={(id, value) => updateConfigPartial(id, { offBehavior: value })}
+                                />
                                 <HostConfigsTable hostConfigs={getOtherHostConfigs} label={"Existing cookie configs for other PROTOCOL://HOSTs"}
-                                                  onDelete={deleteConfig} onDuplicate={duplicateConfig}/>
+                                                  onDelete={deleteConfig} onDuplicate={duplicateConfig}
+                                                  onUpdateOnValue={(id, value) => updateConfigPartial(id, { onValue: value })}
+                                                  onUpdateOffBehavior={(id, value) => updateConfigPartial(id, { offBehavior: value })}
+                                />
 
 
                             </div>

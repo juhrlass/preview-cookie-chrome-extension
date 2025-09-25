@@ -35,8 +35,11 @@ You need node and pnpm installed.
 
 # Usage
 
-Now you can switch the preview cookie on and off, when visiting the site. 
-- If switch is **"On"** the cookie with the given name and **value "1"** is added to the cookies of the respective site
-- If switch is **"Off"** the cookie with the given name is **removed** from the cookies of the respective site
-- Currently only one cookie per site is supported
-- You can add multiple site configurations for different domains
+Now you can switch the configured cookies on and off when visiting a site.
+- If the switch is ON the cookie with the given name is set. You can choose the ON value per config: either "1" or "true".
+- If the switch is OFF you can choose what happens per config:
+  - remove cookie (default)
+  - set the cookie value to "0"
+  - set the cookie value to "false"
+- You can configure multiple cookies per host/origin. Each config appears as its own switch.
+- You can add multiple site configurations for different domains/origins.
