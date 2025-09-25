@@ -151,10 +151,12 @@ export default function App() {
         })
 
 
-    }, [])
+    }, [cookieOnMap])
 
     useLayoutEffect(() => {
-        fetchData();
+        fetchData().then(r => {
+            console.log(r)
+        });
     }, [fetchData])
 
 
